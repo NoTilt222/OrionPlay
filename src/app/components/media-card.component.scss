@@ -1,0 +1,237 @@
+:host {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.card {
+  display: block;
+  min-width: 190px;
+  color: inherit;
+  transition: transform 220ms ease, filter 220ms ease;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.018);
+  filter: saturate(1.08);
+}
+
+.visual {
+  position: relative;
+  aspect-ratio: 0.68;
+  border-radius: var(--card-radius);
+  background:
+    linear-gradient(180deg, rgba(7, 9, 15, 0.08), rgba(7, 9, 15, 0.9)),
+    linear-gradient(145deg, rgba(255, 59, 48, 0.14), rgba(92, 200, 255, 0.04)),
+    var(--bg-elevated);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+}
+
+.card--wide {
+  min-width: 300px;
+}
+
+.card--wide .visual {
+  aspect-ratio: 2.2;
+}
+
+.ambient {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.84)),
+    linear-gradient(120deg, rgba(255, 59, 48, 0.18), transparent 38%);
+}
+
+.topline,
+.details {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  padding: 1rem;
+}
+
+.topline {
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-pill,
+.save-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.3rem;
+  height: 2.3rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  background: rgba(10, 12, 18, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.status-pill {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-pill--muted {
+  background: rgba(10, 12, 18, 0.82);
+  color: #ffb4ad;
+}
+
+.badge-stack {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.hover-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.card:hover .hover-play {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.hover-play span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  background: rgba(255, 59, 48, 0.9);
+  color: white;
+  box-shadow: 0 20px 40px rgba(255, 59, 48, 0.3);
+}
+
+.hover-play--muted span {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.32);
+}
+
+.details {
+  bottom: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.title {
+  display: block;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.25;
+  text-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  color: rgba(241, 243, 247, 0.82);
+  font-size: 0.78rem;
+}
+
+.meta span {
+  padding: 0.24rem 0.48rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.progress {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 0.85rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #ff7d67);
+}
+
+@media (max-width: 640px) {
+  .card {
+    min-width: 0;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .card--wide {
+    min-width: 248px;
+  }
+
+  .topline,
+  .details {
+    padding: 0.75rem;
+  }
+
+  .status-pill,
+  .save-pill {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.65rem;
+  }
+
+  .status-pill {
+    font-size: 0.66rem;
+  }
+
+  .badge-stack {
+    gap: 0.35rem;
+  }
+
+  .hover-play span {
+    width: 3.2rem;
+    height: 3.2rem;
+    font-size: 1.45rem;
+  }
+
+  .title {
+    font-size: 0.9rem;
+  }
+
+  .meta {
+    gap: 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  .meta span {
+    padding: 0.2rem 0.38rem;
+  }
+
+  .progress {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.7rem;
+  }
+}

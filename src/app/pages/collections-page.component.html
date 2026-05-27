@@ -1,0 +1,23 @@
+<section class="page" *ngIf="vm$ | async as vm">
+  <header class="hero glass-panel">
+    <span class="app-chip">Collections</span>
+    <h1>Curated worlds for every mood.</h1>
+    <p class="muted">Action, sci-fi, favorites, and hidden gems gathered into one polished shelf.</p>
+  </header>
+
+  <section class="genre-grid">
+    <a
+      *ngFor="let genre of vm.genres"
+      class="genre-card"
+      [routerLink]="['/movies']"
+      [queryParams]="{ genre: genre.Id }"
+    >
+      <span class="icon-font">auto_awesome</span>
+      <strong>{{ genre.Name }}</strong>
+      <small>Open collection</small>
+    </a>
+  </section>
+
+  <app-media-row title="Fresh Picks" [items]="vm.recentlyAdded" />
+  <app-media-row title="Top Rated" [items]="vm.topRated" />
+</section>

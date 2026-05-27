@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title>OrionPlay Logo</title>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff5b54"/>
+      <stop offset="100%" stop-color="#5cc8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="36" fill="#0f1423"/>
+  <path d="M80 24c18.6 0 33.7 15.1 33.7 33.7S98.6 91.4 80 91.4 46.3 76.3 46.3 57.7 61.4 24 80 24Zm0 18.3a15.4 15.4 0 1 0 0 30.8 15.4 15.4 0 0 0 0-30.8Z" fill="url(#g)"/>
+  <path d="M51.8 101.4 117.8 80 92 136Z" fill="url(#g)"/>
+</svg>

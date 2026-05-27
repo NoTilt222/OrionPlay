@@ -1,0 +1,72 @@
+<ng-container *ngIf="vm$ | async as vm">
+  <div class="player-page">
+    <section class="player-hero glass-panel" [style.background-image]="vm.backdrop ? 'url(' + vm.backdrop + ')' : ''">
+      <div class="player-veil"></div>
+      <div class="player-head">
+        <a class="back" [routerLink]="['/media', vm.item.Id]">
+          <span class="icon-font">arrow_back</span>
+          Back to Title
+        </a>
+
+        <div class="copy">
+          <span class="app-chip">{{ vm.playable ? 'Cinema Mode' : 'Playback Unavailable' }}</span>
+          <h1>{{ vm.item.Name }}</h1>
+          <p>
+            {{
+              vm.playable
+                ? (vm.item.Overview || 'Settle in and let the story take over.')
+                : 'This title is visible in your catalog, but it is not ready to play here just yet.'
+            }}
+          </p>
+
+          <div class="meta">
+            <span>{{ media.releaseYear(vm.item) }}</span>
+            <span>{{ media.runtimeText(vm.item) }}</span>
+            <span>{{ media.ratingText(vm.item) }}</span>
+            <span>{{ media.genreText(vm.item) }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <app-video-player
+      *ngIf="vm.playable && vm.playbackInfo; else unavailablePanel"
+      [item]="vm.item"
+      [playbackInfo]="vm.playbackInfo"
+      [resume]="vm.resume"
+    />
+
+    <ng-template #unavailablePanel>
+      <section class="panel glass-panel unavailable-panel">
+        <span class="app-chip">Save for Later</span>
+        <h2>Playback is currently unavailable for this title.</h2>
+        <p>Head back to the title page to keep it on your list, watch the trailer, or request it for later.</p>
+        <a class="back" [routerLink]="['/media', vm.item.Id]">
+          <span class="icon-font">open_in_new</span>
+          Open Title Page
+        </a>
+      </section>
+    </ng-template>
+
+    <section class="extras" *ngIf="vm.playable">
+      <article class="panel glass-panel">
+        <span class="app-chip">Storyline</span>
+        <h2>About this title</h2>
+        <p>{{ vm.item.Overview || 'A standout pick for your next watch session.' }}</p>
+      </article>
+
+      <article class="panel glass-panel">
+        <span class="app-chip">Watch Flow</span>
+        <h2>Quick controls</h2>
+        <div class="shortcut-list">
+          <span><kbd>Space</kbd> Play or pause</span>
+          <span><kbd>F</kbd> Enter fullscreen</span>
+          <span><kbd>M</kbd> Toggle mute</span>
+          <span><kbd>Left / Right</kbd> Jump 10 seconds</span>
+        </div>
+      </article>
+    </section>
+
+    <app-media-row title="Keep Watching" [items]="vm.recommendations" />
+  </div>
+</ng-container>

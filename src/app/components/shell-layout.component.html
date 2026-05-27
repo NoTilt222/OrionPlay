@@ -1,0 +1,37 @@
+<div class="shell">
+  <app-sidebar />
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-edge"></div>
+
+      <div class="actions">
+        <button type="button" class="icon-button" aria-label="Notifications">
+          <span class="icon-font">notifications_none</span>
+        </button>
+
+        <div class="search-wrap">
+          <div class="search glass-panel">
+            <span class="icon-font">search</span>
+            <input
+              [(ngModel)]="searchTerm"
+              type="search"
+              placeholder="Search movies, shows..."
+              (keyup.enter)="search()"
+            >
+            <button type="button" class="search-submit" (click)="search()" aria-label="Search">
+              <span class="icon-font">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="auth.user() as user" class="user-pill">
+          <div class="avatar" [style.background-image]="avatarStyle"></div>
+          <span>{{ user.Name }}</span>
+        </div>
+      </div>
+    </header>
+
+    <router-outlet />
+  </main>
+</div>

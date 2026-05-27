@@ -1,0 +1,19 @@
+<ng-container *ngIf="vm$ | async as vm; else loading">
+  <section class="library-head glass-panel">
+    <div>
+      <span class="app-chip">{{ vm.type === 'shows' ? 'TV Shows' : 'Movies' }}</span>
+      <h1>{{ vm.type === 'shows' ? 'Binge-worthy series' : 'A curated movie wall' }}</h1>
+      <p class="muted">
+        {{ vm.items.length }} titles ready to explore{{ vm.genre ? ' in this collection' : '' }}.
+      </p>
+    </div>
+  </section>
+
+  <section class="grid">
+    <app-media-card *ngFor="let item of vm.items; trackBy: trackById" [item]="item" />
+  </section>
+</ng-container>
+
+<ng-template #loading>
+  <app-loading-row-skeleton [count]="8" />
+</ng-template>

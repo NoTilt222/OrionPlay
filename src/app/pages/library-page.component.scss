@@ -1,0 +1,37 @@
+.library-head {
+  padding: 1.75rem;
+  border-radius: 30px;
+  margin-bottom: 1.5rem;
+}
+
+.library-head h1 {
+  margin: 0.6rem 0 0.4rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.3rem, 4vw, 3.4rem);
+  letter-spacing: -0.05em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+@media (max-width: 640px) {
+  .library-head {
+    padding: 1rem;
+    border-radius: 24px;
+    margin-bottom: 1rem;
+  }
+
+  .library-head h1 {
+    font-size: clamp(1.85rem, 9vw, 2.6rem);
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    padding-bottom: 1rem;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "serverUrl": "",
+  "apiKey": "",
+  "clientName": "OrionPlay",
+  "deviceName": "Browser",
+  "deviceId": "",
+  "appVersion": "0.1.0",
+  "tmdb": {
+    "apiBaseUrl": "https://api.themoviedb.org/3",
+    "imageBaseUrl": "https://image.tmdb.org/t/p",
+    "apiReadToken": "",
+    "language": "en-US",
+    "region": "US"
+  }
+}

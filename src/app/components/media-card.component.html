@@ -1,0 +1,39 @@
+<a class="card" [routerLink]="['/media', item.Id]" [ngClass]="'card--' + variant">
+  <div class="visual" [style.background-image]="artworkStyle">
+    <div class="ambient"></div>
+
+    <div class="topline">
+      <span *ngIf="showProgress && resumePercent > 0; else availabilityPill" class="status-pill">Resume</span>
+
+      <ng-template #availabilityPill>
+        <span *ngIf="!media.isPlayable(item)" class="status-pill status-pill--muted">Not In Library</span>
+      </ng-template>
+
+      <div class="badge-stack">
+        <span *ngIf="!media.isPlayable(item) && availabilityState.isInWatchlist(item)" class="save-pill icon-font">
+          bookmark
+        </span>
+        <span *ngIf="item.UserData?.IsFavorite" class="save-pill icon-font">favorite</span>
+      </div>
+    </div>
+
+    <div class="hover-play" [class.hover-play--muted]="!media.isPlayable(item)">
+      <span class="icon-font">
+        {{ media.isPlayable(item) ? 'play_arrow' : (availabilityState.isInWatchlist(item) ? 'bookmark' : 'add') }}
+      </span>
+    </div>
+
+    <div class="details">
+      <strong class="title">{{ item.Name }}</strong>
+      <div class="meta">
+        <span>{{ media.releaseYear(item) }}</span>
+        <span>{{ media.ratingText(item) }}</span>
+        <span>{{ media.runtimeText(item) }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="showProgress && resumePercent > 0" class="progress">
+      <span [style.width.%]="resumePercent"></span>
+    </div>
+  </div>
+</a>

@@ -1,0 +1,32 @@
+<section class="settings-grid">
+  <article class="panel glass-panel">
+    <span class="app-chip">Profile</span>
+    <h1>Make OrionPlay yours</h1>
+    <p class="muted">Fine tune your experience, keep your favorites close, and settle in for the next watch.</p>
+    <div class="profile-card" *ngIf="auth.user() as user">
+      <div class="avatar" [style.background-image]="avatarStyle"></div>
+      <div>
+        <strong>{{ user.Name }}</strong>
+        <span class="muted">Premium viewing profile</span>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel glass-panel">
+    <span class="app-chip">Playback</span>
+    <h2>Keyboard shortcuts</h2>
+    <div class="shortcuts">
+      <span><kbd>Space</kbd> Play / pause</span>
+      <span><kbd>F</kbd> Fullscreen</span>
+      <span><kbd>M</kbd> Mute</span>
+      <span><kbd>Left / Right</kbd> Seek 10s</span>
+    </div>
+    <button type="button" (click)="auth.logout()">Sign Out</button>
+  </article>
+
+  <article class="panel glass-panel">
+    <span class="app-chip">Atmosphere</span>
+    <h2>Designed for long nights</h2>
+    <p class="muted">Deep contrast, cinematic highlights, and an interface that stays out of the way of the story.</p>
+  </article>
+</section>

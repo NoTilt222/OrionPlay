@@ -1,0 +1,16 @@
+<section class="page">
+  <header class="hero glass-panel">
+    <span class="app-chip">Continue Watching</span>
+    <h1>Your story is waiting.</h1>
+    <p class="muted">Pick up every favorite right where you left it.</p>
+  </header>
+
+  <div class="grid" *ngIf="continueWatching$ | async as items">
+    <app-media-card
+      *ngFor="let item of items; trackBy: trackById"
+      [item]="item"
+      variant="wide"
+      [showProgress]="true"
+    />
+  </div>
+</section>

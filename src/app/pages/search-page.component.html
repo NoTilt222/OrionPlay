@@ -1,0 +1,14 @@
+<section class="search-page">
+  <header class="hero glass-panel">
+    <span class="app-chip">Search</span>
+    <h1>Find something worth pressing play on.</h1>
+    <p class="muted">Explore favorites, discover something new, and dive straight back in.</p>
+  </header>
+
+  <div *ngIf="results$ | async as results">
+    <p class="muted summary">{{ results.query ? ('Results for "' + results.query + '"') : 'Enter a search term in the header.' }}</p>
+    <div class="grid">
+      <app-media-card *ngFor="let item of results.items; trackBy: trackById" [item]="item" />
+    </div>
+  </div>
+</section>

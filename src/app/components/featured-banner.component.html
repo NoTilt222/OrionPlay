@@ -1,0 +1,46 @@
+<section *ngIf="activeItem as item" class="banner" [style.background-image]="backgroundStyle(item)">
+  <div class="veil"></div>
+  <div class="halo"></div>
+
+  <div class="content">
+    <span class="eyebrow app-chip">Featured</span>
+    <h1>{{ item.Name }}</h1>
+    <p>{{ item.Overview || 'A new favorite is ready the moment you are.' }}</p>
+
+    <div class="meta">
+      <span>{{ media.releaseYear(item) }}</span>
+      <span>{{ media.runtimeText(item) }}</span>
+      <span>{{ media.ratingText(item) }}</span>
+      <span>{{ item.Genres?.slice(0, 3)?.join(' / ') || 'Tonight\'s spotlight' }}</span>
+    </div>
+
+    <div class="actions">
+      <a *ngIf="media.isPlayable(item); else unavailableAction" class="primary" [routerLink]="['/player', item.Id]" [queryParams]="{ resume: true }">
+        <span class="icon-font">play_arrow</span>
+        {{ item.UserData?.PlaybackPositionTicks ? 'Resume' : 'Play Now' }}
+      </a>
+
+      <ng-template #unavailableAction>
+        <button type="button" class="secondary secondary--muted" disabled>
+          <span class="icon-font">lock</span>
+          Not In Library
+        </button>
+      </ng-template>
+
+      <a class="secondary" [routerLink]="['/media', item.Id]">
+        <span class="icon-font">info</span>
+        More Info
+      </a>
+    </div>
+
+    <div class="indicators" *ngIf="items.length > 1">
+      <button
+        type="button"
+        *ngFor="let hero of items; let index = index; trackBy: trackById"
+        [class.is-active]="index === activeIndex()"
+        (click)="setActive(index)"
+        [attr.aria-label]="'Go to featured title ' + (index + 1)"
+      ></button>
+    </div>
+  </div>
+</section>

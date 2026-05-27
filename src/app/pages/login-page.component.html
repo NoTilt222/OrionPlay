@@ -1,0 +1,213 @@
+<div class="login-page">
+  <section class="showcase">
+    <div class="brand-lockup">
+      <img src="/assets/logo-mark.svg" alt="OrionPlay logo">
+      <div class="wordmark">
+        <strong>ORION</strong>
+        <span>PLAY</span>
+      </div>
+    </div>
+
+    <div class="showcase-glow"></div>
+
+    <div class="poster-wall">
+      <article
+        *ngFor="let tile of showcasePosters(); let index = index"
+        class="poster-card"
+        [ngClass]="'poster-card--' + index"
+        [style.background-image]="posterArt(tile)"
+      >
+        <span>{{ media.releaseYear(tile) }}</span>
+        <strong>{{ tile.Name }}</strong>
+      </article>
+    </div>
+
+    <div class="showcase-copy">
+      <h1>Watch. Enjoy. Anywhere.</h1>
+      <p>Your movies. Your shows. All in one place.</p>
+    </div>
+
+    <div class="feature-strip">
+      <span><i class="icon-font">high_quality</i> HD Streaming</span>
+      <span><i class="icon-font">auto_awesome</i> Personalized</span>
+      <span><i class="icon-font">devices</i> Any Device</span>
+    </div>
+  </section>
+
+  <section class="panel glass-panel">
+    <div class="panel-head">
+      <img src="/assets/logo-mark.svg" alt="OrionPlay logo">
+      <div>
+        <span class="eyebrow">OrionPlay</span>
+        <h2>Welcome back to OrionPlay</h2>
+        <p>Sign in to continue to your account</p>
+      </div>
+    </div>
+
+    <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="profiles" *ngIf="publicUsers().length">
+        <div class="profiles-head">
+          <span class="muted">Quick profiles</span>
+          <small>Select a profile to fill in the sign-in form or launch guest access.</small>
+        </div>
+
+        <div class="profile-pills">
+          <button
+            type="button"
+            *ngFor="let user of publicUsers()"
+            class="profile-card"
+            [class.profile-card--active]="selectedPublicUserId() === user.Id"
+            [attr.aria-label]="user.Name"
+            [title]="user.Name"
+            (click)="selectPublicUser(user)"
+          >
+            <div class="profile-avatar" [style.background-image]="profileAvatarStyle(user)">
+              <span *ngIf="!profileAvatarStyle(user)">{{ user.Name.charAt(0) }}</span>
+            </div>
+            <strong>{{ user.Name }}</strong>
+          </button>
+        </div>
+      </div>
+
+      <label>
+        Username or email
+        <div class="input-shell">
+          <span class="icon-font">person</span>
+          <input formControlName="username" placeholder="Enter your username">
+        </div>
+      </label>
+
+      <label>
+        Password
+        <div class="input-shell">
+          <span class="icon-font">lock</span>
+          <input
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Enter your password"
+          >
+          <button type="button" class="toggle" (click)="togglePasswordVisibility()">
+            <span class="icon-font">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+          </button>
+        </div>
+      </label>
+
+      <div class="form-row">
+        <label class="remember">
+          <input type="checkbox" formControlName="remember">
+          <span>Remember me</span>
+        </label>
+        <a href="" (click)="$event.preventDefault()">Forgot password?</a>
+      </div>
+
+      <button class="submit" type="submit" [disabled]="form.invalid || loading()">
+        {{ loading() ? 'Signing In...' : 'Sign In' }}
+      </button>
+
+      <div class="mobile-utility">
+        <button
+          type="button"
+          class="guest"
+          (click)="browseAsGuest()"
+          [disabled]="!publicUsers().length || guestLoading()"
+        >
+          <span class="icon-font">rocket_launch</span>
+          {{ guestLoading() ? 'Opening...' : 'Guest' }}
+        </button>
+
+        <button type="button" class="ghost-button" (click)="openCreateAccount()">
+          <span class="icon-font">person_add</span>
+          Create Account
+        </button>
+      </div>
+
+      <div class="divider">
+        <span></span>
+        <strong>OR</strong>
+        <span></span>
+      </div>
+
+      <button
+        type="button"
+        class="guest"
+        (click)="browseAsGuest()"
+        [disabled]="!publicUsers().length || guestLoading()"
+      >
+        <span class="icon-font">rocket_launch</span>
+        {{ guestLoading() ? 'Opening Guest Session...' : 'Browse as Guest' }}
+      </button>
+
+      <p class="guest-note" *ngIf="publicUsers().length">
+        Guest access works with a public Jellyfin profile that has no password set.
+      </p>
+    </form>
+
+    <footer class="panel-foot">
+      <span>
+        New here?
+        <button type="button" class="text-link" (click)="openCreateAccount()">Create an account</button>
+      </span>
+      <small>&copy; 2026 OrionPlay. All rights reserved.</small>
+    </footer>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="createAccountOpen()" (click)="closeCreateAccount()">
+  <section class="create-panel glass-panel" (click)="$event.stopPropagation()">
+    <div class="create-head">
+      <div>
+        <span class="eyebrow">New Account</span>
+        <h3>Create your OrionPlay profile</h3>
+        <p>This creates a new Jellyfin user and signs you in right away.</p>
+      </div>
+
+      <button type="button" class="close-button" (click)="closeCreateAccount()">
+        <span class="icon-font">close</span>
+      </button>
+    </div>
+
+    <form class="create-form" [formGroup]="createAccountForm" (ngSubmit)="submitCreateAccount()">
+      <label>
+        Username
+        <div class="input-shell">
+          <span class="icon-font">person_add</span>
+          <input formControlName="username" placeholder="Choose a username">
+        </div>
+      </label>
+
+      <label>
+        Password
+        <div class="input-shell">
+          <span class="icon-font">lock</span>
+          <input
+            [type]="showCreatePassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Choose a password"
+          >
+          <button type="button" class="toggle" (click)="toggleCreatePasswordVisibility()">
+            <span class="icon-font">{{ showCreatePassword() ? 'visibility_off' : 'visibility' }}</span>
+          </button>
+        </div>
+      </label>
+
+      <label>
+        Confirm password
+        <div class="input-shell">
+          <span class="icon-font">verified_user</span>
+          <input
+            [type]="showCreatePassword() ? 'text' : 'password'"
+            formControlName="confirmPassword"
+            placeholder="Repeat your password"
+          >
+        </div>
+      </label>
+
+      <div class="create-actions">
+        <button type="button" class="ghost-button" (click)="closeCreateAccount()">Cancel</button>
+        <button type="submit" class="submit" [disabled]="createAccountForm.invalid || accountLoading()">
+          {{ accountLoading() ? 'Creating Account...' : 'Create Account' }}
+        </button>
+      </div>
+    </form>
+  </section>
+</div>

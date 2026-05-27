@@ -1,0 +1,111 @@
+<ng-container *ngIf="vm$ | async as vm">
+  <section class="hero" [style.background-image]="vm.backdrop ? 'url(' + vm.backdrop + ')' : ''">
+    <div class="veil"></div>
+    <div class="content-shell">
+      <div class="poster-card" [style.background-image]="vm.poster ? 'url(' + vm.poster + ')' : ''"></div>
+
+      <div class="content">
+        <div class="eyebrow-row">
+          <span class="app-chip">{{ vm.item.Type === 'Series' ? 'Series' : 'Featured Film' }}</span>
+          <span class="state-pill" [class.state-pill--muted]="!vm.playable">
+            {{ vm.playable ? 'Available Now' : 'Not In Library' }}
+          </span>
+        </div>
+
+        <h1>{{ vm.item.Name }}</h1>
+        <p>{{ vm.item.Overview || 'A story worth settling into.' }}</p>
+
+        <div class="meta">
+          <span>{{ media.releaseYear(vm.item) }}</span>
+          <span>{{ media.runtimeText(vm.item) }}</span>
+          <span>{{ media.ratingText(vm.item) }}</span>
+          <span>{{ media.genreText(vm.item) }}</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat glass-card">
+            <small>Status</small>
+            <strong>{{ vm.playable ? (vm.resume ? media.resumeTimeText(vm.item) : 'Ready to watch') : 'Save or request this title' }}</strong>
+          </div>
+          <div class="stat glass-card">
+            <small>Genre</small>
+            <strong>{{ media.genreText(vm.item, 2) }}</strong>
+          </div>
+          <div class="stat glass-card">
+            <small>Cast</small>
+            <strong>{{ vm.item.Cast?.[0]?.Name || 'Fresh picks for tonight' }}</strong>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a *ngIf="vm.playable; else unavailableAction" class="primary" [routerLink]="['/player', vm.item.Id]" [queryParams]="{ resume: true }">
+            <span class="icon-font">play_arrow</span>
+            {{ vm.resume ? 'Resume' : 'Play Now' }}
+          </a>
+
+          <ng-template #unavailableAction>
+            <button type="button" class="secondary secondary--muted" disabled>
+              <span class="icon-font">lock</span>
+              Not In Library
+            </button>
+          </ng-template>
+
+          <button
+            *ngIf="vm.playable; else watchlistAction"
+            type="button"
+            class="secondary"
+            (click)="toggleFavorite(vm.item, vm.item.UserData?.IsFavorite ?? false)"
+          >
+            <span class="icon-font">{{ vm.item.UserData?.IsFavorite ? 'favorite' : 'favorite_border' }}</span>
+            {{ vm.item.UserData?.IsFavorite ? 'In My List' : 'Add to My List' }}
+          </button>
+
+          <ng-template #watchlistAction>
+            <button type="button" class="secondary" (click)="toggleWatchlist(vm.item)">
+              <span class="icon-font">{{ vm.isWatchlisted ? 'bookmark' : 'bookmark_add' }}</span>
+              {{ vm.isWatchlisted ? 'Saved for Later' : 'Add to Watchlist' }}
+            </button>
+          </ng-template>
+
+          <button
+            *ngIf="!vm.playable"
+            type="button"
+            class="secondary"
+            [class.secondary--active]="vm.isRequested"
+            (click)="requestTitle(vm.item)"
+          >
+            <span class="icon-font">{{ vm.isRequested ? 'check_circle' : 'notifications_active' }}</span>
+            {{ vm.isRequested ? 'Requested' : 'Request Movie' }}
+          </button>
+
+          <a *ngIf="vm.trailer?.Url" class="secondary" [href]="vm.trailer?.Url" target="_blank" rel="noreferrer">
+            <span class="icon-font">smart_display</span>
+            Watch Trailer
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cast-panel glass-panel" *ngIf="vm.item.Cast?.length">
+    <div class="cast-head">
+      <div>
+        <span class="app-chip">Cast</span>
+        <h2>Meet the faces behind the story</h2>
+      </div>
+      <span class="muted">Handpicked standouts from the main ensemble.</span>
+    </div>
+
+    <div class="cast-grid">
+      <article class="cast-card" *ngFor="let castMember of vm.item.Cast">
+        <div class="cast-avatar" [style.background-image]="castMember.ProfileUrl ? 'url(' + castMember.ProfileUrl + ')' : ''">
+          <span *ngIf="!castMember.ProfileUrl">{{ castMember.Name.charAt(0) }}</span>
+        </div>
+        <strong>{{ castMember.Name }}</strong>
+        <small>{{ castMember.Character || 'Featured role' }}</small>
+      </article>
+    </div>
+  </section>
+
+  <app-media-row title="More Like This" [items]="vm.recommendations" />
+</ng-container>

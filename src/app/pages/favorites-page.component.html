@@ -1,0 +1,11 @@
+<section class="favorites">
+  <header class="header glass-panel">
+    <span class="app-chip">My List</span>
+    <h1>Your saved favorites</h1>
+    <p class="muted">The titles you want within easy reach for movie night.</p>
+  </header>
+
+  <div class="grid" *ngIf="favorites$ | async as items">
+    <app-media-card *ngFor="let item of items; trackBy: trackById" [item]="item" />
+  </div>
+</section>

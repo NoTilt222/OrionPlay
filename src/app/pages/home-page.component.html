@@ -1,0 +1,79 @@
+<ng-container *ngIf="home$ | async as home">
+  <ng-container *ngTemplateOutlet="pageLayout; context: { $implicit: home }" />
+</ng-container>
+
+<ng-template #pageLayout let-home>
+  <div class="home-page">
+    <app-featured-banner class="hero-banner" [items]="home.heroItems" />
+
+    <section class="editorial-row">
+      <aside class="spotlight glass-panel">
+        <div class="spotlight-head">
+          <div>
+            <span class="app-chip">Spotlight</span>
+            <h2>Next up tonight</h2>
+          </div>
+          <span class="muted">Handpicked</span>
+        </div>
+
+        <div class="spotlight-grid">
+          <a
+            *ngFor="let item of home.spotlightPicks; trackBy: trackById"
+            class="spotlight-card"
+            [routerLink]="['/media', item.Id]"
+          >
+            <div class="spotlight-art" [style.background-image]="railArt(item)"></div>
+            <div class="spotlight-copy">
+              <strong>{{ item.Name }}</strong>
+              <span>{{ media.releaseYear(item) }} / {{ media.runtimeText(item) }}</span>
+              <small>{{ item.Tagline || media.genreText(item, 2) }}</small>
+            </div>
+          </a>
+        </div>
+      </aside>
+
+      <section class="continue-section glass-panel">
+        <div class="section-head">
+          <div>
+            <span class="app-chip">Continue Watching</span>
+            <h2>Jump right back in</h2>
+          </div>
+          <a class="head-link" [routerLink]="['/continue-watching']">See all</a>
+        </div>
+
+        <div class="continue-rail">
+          <div class="continue-grid">
+            <app-media-card
+              *ngFor="let item of home.continueWatching.slice(0, 4); trackBy: trackById"
+              [item]="item"
+              variant="wide"
+              [showProgress]="true"
+            />
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="genre-marquee">
+      <a
+        *ngFor="let genre of home.genres; trackBy: trackGenre"
+        class="genre-chip"
+        [routerLink]="['/movies']"
+        [queryParams]="{ genre: genre.Id }"
+      >
+        <span class="icon-font">local_fire_department</span>
+        {{ genre.Name }}
+      </a>
+    </section>
+
+    <div class="shelves">
+      <app-media-row title="Trending Now" [items]="home.trendingNow" />
+      <app-media-row title="Popular Movies" [items]="home.popularMovies" />
+      <app-media-row title="New Releases" [items]="home.newReleases" />
+      <app-media-row title="Recommended For You" [items]="home.recommendedForYou" />
+      <app-media-row title="Action Movies" [items]="home.actionMovies" />
+      <app-media-row title="Sci-Fi" [items]="home.sciFi" />
+      <app-media-row title="TV Shows" [items]="home.tvShows" />
+    </div>
+  </div>
+</ng-template>

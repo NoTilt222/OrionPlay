@@ -1,0 +1,48 @@
+.search-page {
+  display: grid;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.hero {
+  padding: 1.5rem;
+  border-radius: 28px;
+}
+
+.hero h1 {
+  margin: 0.7rem 0 0.3rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.05em;
+}
+
+.summary {
+  margin: 0 0 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .search-page {
+    gap: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .hero {
+    padding: 1rem;
+    border-radius: 24px;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.8rem, 8vw, 2.5rem);
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+}

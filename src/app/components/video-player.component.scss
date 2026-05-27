@@ -1,0 +1,179 @@
+.player-shell {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.frame {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(8, 10, 16, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.frame-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.title-block {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.title-block strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.2rem, 2vw, 1.7rem);
+}
+
+.kicker {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+video {
+  width: 100%;
+  min-height: min(72vh, 48rem);
+  border-radius: 24px;
+  background: #000;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 22px;
+}
+
+.info-stack,
+.controls,
+.shortcut-strip {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.info-stack {
+  gap: 0.7rem;
+}
+
+.info-pill {
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+select,
+button {
+  padding: 0.8rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.shortcut-strip {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+kbd {
+  padding: 0.15rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .frame-top,
+  .hud {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .player-shell {
+    gap: 0.85rem;
+  }
+
+  .frame {
+    gap: 0.85rem;
+    padding: 0.8rem;
+    border-radius: 22px;
+  }
+
+  .frame-top {
+    gap: 0.8rem;
+  }
+
+  .quick-actions,
+  .pill-button {
+    width: 100%;
+  }
+
+  .pill-button {
+    justify-content: center;
+  }
+
+  video {
+    min-height: min(34vh, 16rem);
+    border-radius: 18px;
+  }
+
+  .hud {
+    padding: 0.85rem;
+    border-radius: 18px;
+  }
+
+  .controls {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  label {
+    width: 100%;
+  }
+
+  select {
+    width: 100%;
+  }
+
+  .shortcut-strip {
+    display: grid;
+    gap: 0.55rem;
+  }
+}

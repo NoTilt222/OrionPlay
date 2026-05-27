@@ -1,0 +1,56 @@
+<div class="player-shell">
+  <div class="frame">
+    <div class="frame-top">
+      <div class="title-block">
+        <span class="kicker">Now Playing</span>
+        <strong>{{ item.Name }}</strong>
+        <span class="muted">{{ resume ? media.resumeTimeText(item) : media.runtimeText(item) }}</span>
+      </div>
+
+      <div class="quick-actions">
+        <button type="button" class="pill-button" (click)="toggleFullscreen()">
+          <span class="icon-font">fullscreen</span>
+          Fullscreen
+        </button>
+      </div>
+    </div>
+
+    <video #video playsinline controls></video>
+  </div>
+
+  <div class="hud glass-panel">
+    <div class="info-stack">
+      <span class="info-pill">{{ media.releaseYear(item) }}</span>
+      <span class="info-pill">{{ media.ratingText(item) }}</span>
+      <span class="info-pill">{{ media.genreText(item, 2) }}</span>
+    </div>
+
+    <div class="controls">
+      <label>
+        Quality
+        <select [value]="selectedQuality()" (change)="setQuality($any($event.target).value)">
+          <option value="-1">Auto</option>
+          <option *ngFor="let option of qualities()" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Subtitles
+        <select [value]="selectedSubtitle()" (change)="setSubtitle($any($event.target).value)">
+          <option value="-1">Off</option>
+          <option *ngFor="let track of subtitleTracks(); let i = index" [value]="i">
+            {{ track.name || track.lang || ('Track ' + (i + 1)) }}
+          </option>
+        </select>
+      </label>
+
+      <div class="shortcut-strip">
+        <span><kbd>Space</kbd> Play</span>
+        <span><kbd>F</kbd> Fullscreen</span>
+        <span><kbd>M</kbd> Mute</span>
+      </div>
+    </div>
+  </div>
+</div>

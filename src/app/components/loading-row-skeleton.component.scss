@@ -1,0 +1,45 @@
+.skeleton-row {
+  display: grid;
+  gap: 1rem;
+}
+
+.skeleton-title,
+.skeleton-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-title {
+  width: 13rem;
+  height: 1.8rem;
+}
+
+.skeleton-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(180px, 1fr);
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.skeleton-card {
+  aspect-ratio: 0.68;
+}
+
+.skeleton-title::after,
+.skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

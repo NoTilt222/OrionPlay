@@ -1,0 +1,22 @@
+<section class="row-section">
+  <div class="row-head">
+    <div class="row-copy">
+      <h2 class="section-title">{{ title }}</h2>
+      <span class="muted" *ngIf="caption">{{ caption }}</span>
+    </div>
+    <span class="row-arrow icon-font">chevron_right</span>
+  </div>
+
+  <div *ngIf="items?.length; else emptyState" class="row-scroll" [ngClass]="{ 'row-scroll--wide': variant === 'wide' }">
+    <app-media-card
+      *ngFor="let item of items; trackBy: trackById"
+      [item]="item"
+      [variant]="variant"
+      [showProgress]="showProgress"
+    />
+  </div>
+
+  <ng-template #emptyState>
+    <div class="empty glass-panel">{{ emptyMessage }}</div>
+  </ng-template>
+</section>
