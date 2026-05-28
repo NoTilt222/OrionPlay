@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
-import { AuthSession, JellyfinUser } from '../models/auth.model';
+import { AuthSession, JellyfinUser, OrionPlaySessionMeta } from '../models/auth.model';
 import { AppConfigService } from './app-config.service';
 
 type StorageMode = 'session' | 'local';
@@ -20,6 +20,7 @@ export class AuthService {
   readonly session = computed(() => this.sessionSignal());
   readonly user = computed(() => this.sessionSignal()?.User ?? null);
   readonly isAuthenticated = computed(() => Boolean(this.sessionSignal()?.AccessToken));
+  readonly isGuest = computed(() => Boolean(this.sessionSignal()?.OrionPlay?.IsGuest));
 
   get token(): string {
     return this.sessionSignal()?.AccessToken ?? this.configService.config.apiKey ?? '';
@@ -29,7 +30,16 @@ export class AuthService {
     return this.sessionSignal()?.User.Id ?? '';
   }
 
-  login(username: string, password: string, remember = false) {
+  get requesterName(): string {
+    return this.sessionSignal()?.User.Name ?? '';
+  }
+
+  get requesterEmail(): string {
+    const identifier = this.sessionSignal()?.OrionPlay?.LoginIdentifier?.trim() ?? '';
+    return this.looksLikeEmail(identifier) ? identifier : '';
+  }
+
+  login(username: string, password: string, remember = false, meta: OrionPlaySessionMeta = {}) {
     const url = `${this.configService.serverUrl}/Users/AuthenticateByName`;
 
     const headers = new HttpHeaders({
@@ -40,8 +50,14 @@ export class AuthService {
       .post<AuthSession>(url, { Username: username, Pw: password }, { headers })
       .pipe(
         tap((session) => {
-          this.sessionSignal.set(session);
-          this.persistSession(session, remember ? 'local' : 'session');
+          const decoratedSession = this.decorateSession(session, {
+            IsGuest: false,
+            LoginIdentifier: username.trim(),
+            ...meta
+          });
+
+          this.sessionSignal.set(decoratedSession);
+          this.persistSession(decoratedSession, remember ? 'local' : 'session');
         })
       );
   }
@@ -60,20 +76,42 @@ export class AuthService {
     return this.http
       .get<JellyfinUser[]>(`${this.configService.serverUrl}/Users/Public`)
       .pipe(
+        switchMap((users) => {
+          const passwordFiltered = this.filterGuestCapableUsers(users);
+
+          if (passwordFiltered.length !== users.length || !this.configService.config.apiKey?.trim()) {
+            return of(passwordFiltered);
+          }
+
+          return this.http.get<JellyfinUser[]>(`${this.configService.serverUrl}/Users`).pipe(
+            map((allUsers) => {
+              const detailsById = new Map(allUsers.map((user) => [user.Id, user]));
+
+              return users.filter((user) => {
+                const details = detailsById.get(user.Id);
+                return !this.hasPassword(details ?? user);
+              });
+            }),
+            catchError(() => of(passwordFiltered))
+          );
+        }),
         map((users) => [...users].sort((left, right) => left.Name.localeCompare(right.Name))),
         catchError(() => of([] as JellyfinUser[]))
       );
   }
 
   loginAsGuest(user: JellyfinUser, remember = false) {
-    return this.login(user.Name, '', remember);
+    return this.login(user.Name, '', remember, {
+      IsGuest: true,
+      LoginIdentifier: user.Name
+    });
   }
 
   createAccount(username: string, password: string) {
     const url = `${this.configService.serverUrl}/Users/New`;
 
     return this.http.post<JellyfinUser>(url, { Name: username, Password: password }).pipe(
-      switchMap((user) => this.publishUserToLoginScreen(user).pipe(map(() => user)))
+      switchMap((user) => this.hideUserFromLoginScreen(user).pipe(map(() => user)))
     );
   }
 
@@ -103,6 +141,28 @@ export class AuthService {
     }
 
     return `MediaBrowser ${parts.join(', ')}`;
+  }
+
+  private decorateSession(session: AuthSession, meta: OrionPlaySessionMeta): AuthSession {
+    return {
+      ...session,
+      OrionPlay: {
+        ...(session.OrionPlay ?? {}),
+        ...meta
+      }
+    };
+  }
+
+  private looksLikeEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  private filterGuestCapableUsers(users: JellyfinUser[]): JellyfinUser[] {
+    return users.filter((user) => !this.hasPassword(user));
+  }
+
+  private hasPassword(user: JellyfinUser | null | undefined): boolean {
+    return Boolean(user?.HasPassword || user?.HasConfiguredPassword);
   }
 
   private hydrateSession(): AuthSession | null {
@@ -135,7 +195,7 @@ export class AuthService {
     globalThis.sessionStorage?.removeItem(this.storageModeKey);
   }
 
-  private publishUserToLoginScreen(user: JellyfinUser) {
+  private hideUserFromLoginScreen(user: JellyfinUser) {
     if (!user?.Id || !this.configService.serverUrl) {
       return of(void 0);
     }
@@ -144,11 +204,7 @@ export class AuthService {
       switchMap((fullUser) => {
         const policy = {
           ...(fullUser.Policy ?? {}),
-          IsHidden: false,
-          IsDisabled: false,
-          EnableAllFolders: true,
-          EnableMediaPlayback: true,
-          EnableRemoteAccess: true
+          IsHidden: true
         };
 
         return this.http.post<void>(`${this.configService.serverUrl}/Users/${user.Id}/Policy`, policy);

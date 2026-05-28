@@ -2,7 +2,8 @@ import { config as loadEnv } from 'dotenv';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-loadEnv();
+loadEnv({ path: resolve('.env') });
+loadEnv({ path: resolve('.env.local'), override: true });
 
 const targetPath = resolve('src/assets/app-config.json');
 const templatePath = resolve('src/assets/app-config.template.json');

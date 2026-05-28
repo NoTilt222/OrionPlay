@@ -68,14 +68,29 @@
           </ng-template>
 
           <button
-            *ngIf="!vm.playable"
+            *ngIf="vm.canRequestMovie"
             type="button"
             class="secondary"
-            [class.secondary--active]="vm.isRequested"
+            [class.secondary--active]="vm.isRequestSent"
+            [disabled]="vm.isRequestSent || requestLoadingId() === vm.item.Id"
             (click)="requestTitle(vm.item)"
           >
-            <span class="icon-font">{{ vm.isRequested ? 'check_circle' : 'notifications_active' }}</span>
-            {{ vm.isRequested ? 'Requested' : 'Request Movie' }}
+            <span class="icon-font">
+              {{
+                requestLoadingId() === vm.item.Id
+                  ? 'hourglass_top'
+                  : vm.isRequestSent
+                    ? 'check_circle'
+                    : 'notifications_active'
+              }}
+            </span>
+            {{
+              requestLoadingId() === vm.item.Id
+                ? 'Sending Request...'
+                : vm.isRequestSent
+                  ? 'Request sent'
+                  : 'Request Movie'
+            }}
           </button>
 
           <a *ngIf="vm.trailer?.Url" class="secondary" [href]="vm.trailer?.Url" target="_blank" rel="noreferrer">

@@ -10,7 +10,7 @@ OrionPlay is a standalone Angular frontend for Jellyfin with a dark, cinematic b
 - Jellyfin library matching with playable and unavailable states
 - Home page with featured banner, continue watching, trending, recently added, and categories
 - Movie and TV browsing pages
-- Favorites, watchlist, and request states
+- Favorites, watchlist, and email-based movie requests
 - Search
 - Media details page with resume playback support
 - HLS playback via `hls.js`
@@ -43,15 +43,20 @@ src/app/
    Copy-Item .env.example .env
    ```
 
-3. Set your Jellyfin URL and TMDB read token:
+3. Set your Jellyfin URL, TMDB read token, and movie request email settings:
 
    ```env
    JELLYFIN_SERVER_URL=https://media.example.com
    JELLYFIN_API_KEY=
    TMDB_API_READ_TOKEN=your_tmdb_read_access_token
+   RESEND_API_KEY=your_resend_api_key
+   REQUEST_EMAIL_TO=owner@example.com
+   REQUEST_EMAIL_FROM=requests@example.com
    ```
 
 `TMDB_API_READ_TOKEN` is the TMDB API Read Access Token from your TMDB account settings. Because OrionPlay is a browser app, use a read-only token here rather than a secret intended for a private server.
+
+`RESEND_API_KEY` stays server-side and is only used by the Vercel function that sends request emails. `REQUEST_EMAIL_FROM` must be a sender address that Resend accepts for your account or verified domain.
 
 4. Start locally:
 
@@ -65,16 +70,30 @@ src/app/
    npm run frontend
    ```
 
-`npm start` generates `src/assets/app-config.json` from environment variables and then runs `ng serve`.
+`npm start` and `npm run frontend` now start two local processes together:
+
+- the Angular dev server
+- the local `/api/request-movie` helper used for email requests
+
+That means the `Request Movie` button works during normal Angular local development too.
 
 If you run plain `ng serve`, the app still works as long as `src/assets/app-config.json` already contains valid values. Re-run `npm run generate:config` after changing env vars.
+
+If you prefer two terminals instead of the combined dev script:
+
+```bash
+npm run frontend:api
+npm run frontend:angular
+```
+
+The deployed app still uses the Vercel serverless function at `/api/request-movie`. Local Angular development proxies that same path to the local helper server through `proxy.conf.json`.
 
 ## Vercel deployment
 
 1. Push this repo to GitHub/GitLab/Bitbucket.
 2. Import it into Vercel as an Other framework project.
 3. Set the build command to `npm run build`.
-4. Confirm the output directory is `dist/orionplay`.
+4. Confirm the output directory is `dist/orionplay/browser`.
 5. Add Vercel environment variables:
 
    - `JELLYFIN_SERVER_URL`
@@ -88,10 +107,21 @@ If you run plain `ng serve`, the app still works as long as `src/assets/app-conf
    - `TMDB_IMAGE_BASE_URL` (optional)
    - `TMDB_LANGUAGE` (optional)
    - `TMDB_REGION` (optional)
+   - `RESEND_API_KEY`
+   - `REQUEST_EMAIL_TO`
+   - `REQUEST_EMAIL_FROM`
 
 6. Deploy.
 
-`vercel.json` rewrites all routes to `index.html`, so Angular client-side routing continues to work on refresh without 404 errors.
+`vercel.json` serves the Angular build from `dist/orionplay/browser` and rewrites client routes to `index.html`, so Angular refreshes continue to work without 404 errors while `/api/request-movie` stays available as a serverless endpoint.
+
+## Email movie requests
+
+- `Request Movie` appears only for unavailable movies that have a TMDB movie id.
+- Playable titles never show the request button.
+- Guest sessions can browse, but requesting prompts the guest to sign in with a full account first.
+- Signed-in users send requests through `POST /api/request-movie`, which emails the site owner through Resend.
+- The app prevents duplicate requests for the same movie during the current browser session.
 
 ## Connecting Vercel to Jellyfin securely
 
@@ -179,7 +209,7 @@ curl --request GET \
 ## Availability behavior
 
 - Titles found in Jellyfin show `Play` or `Resume` and stream through Jellyfin.
-- Titles that only exist in TMDB stay visible in the catalog but show `Not In Library`, `Add to Watchlist`, and `Request Movie`.
+- Titles that only exist in TMDB stay visible in the catalog but show `Not In Library`, `Add to Watchlist`, and, for movie titles with TMDB ids, `Request Movie`.
 - `My List` combines Jellyfin favorites with saved watchlist titles.
 
 ## Notes

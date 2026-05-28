@@ -5,8 +5,10 @@
   "description": "OrionPlay - a modern Angular + Jellyfin streaming frontend",
   "scripts": {
     "generate:config": "node ./scripts/write-runtime-config.mjs",
-    "frontend": "npm run generate:config && ng serve",
-    "start": "npm run generate:config && ng serve",
+    "frontend": "node ./scripts/dev-frontend.mjs",
+    "frontend:angular": "npm run generate:config && ng serve --proxy-config proxy.conf.json",
+    "frontend:api": "node ./scripts/request-dev-server.mjs",
+    "start": "node ./scripts/dev-frontend.mjs",
     "build": "npm run generate:config && ng build",
     "watch": "npm run generate:config && ng build --watch --configuration development"
   },

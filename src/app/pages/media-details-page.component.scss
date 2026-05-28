@@ -157,6 +157,11 @@ small {
   box-shadow: 0 0 0 1px rgba(255, 59, 48, 0.18);
 }
 
+.secondary:disabled {
+  opacity: 0.78;
+  cursor: not-allowed;
+}
+
 .cast-panel {
   display: grid;
   gap: 1rem;
