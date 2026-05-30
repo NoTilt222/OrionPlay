@@ -6,9 +6,8 @@ import { FeaturedBannerComponent } from '../components/featured-banner.component
 import { MediaCardComponent } from '../components/media-card.component';
 import { MediaRowComponent } from '../components/media-row.component';
 import { MediaItem } from '../models/media.model';
-import { MOCK_HOME_CATALOG } from '../shared/mock-catalog';
 import { AuthService } from '../services/auth.service';
-import { HomeSections, MediaService } from '../services/media.service';
+import { EMPTY_HOME_SECTIONS, MediaService } from '../services/media.service';
 
 @Component({
   selector: 'app-home-page',
@@ -22,10 +21,9 @@ export class HomePageComponent {
   private readonly auth = inject(AuthService);
   protected readonly media = inject(MediaService);
 
-  protected readonly mockHome: HomeSections = MOCK_HOME_CATALOG;
   protected readonly home$ = this.media.getHomeSections(this.auth.userId).pipe(
-    startWith(this.mockHome),
-    catchError(() => of(this.mockHome))
+    startWith(EMPTY_HOME_SECTIONS),
+    catchError(() => of(EMPTY_HOME_SECTIONS))
   );
 
   protected readonly railArt = (item: MediaItem) => {

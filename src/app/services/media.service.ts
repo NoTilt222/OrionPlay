@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { catchError, combineLatest, map, Observable, of, switchMap } from 'rxjs';
 import { GenreItem, MediaCollectionResponse, MediaItem } from '../models/media.model';
-import { MOCK_HOME_CATALOG, MOCK_ITEM_LOOKUP } from '../shared/mock-catalog';
 import { AvailabilityStateService } from './availability-state.service';
 import { JellyfinApiService } from './jellyfin-api.service';
 import { JellyfinLibraryService } from './jellyfin-library.service';
@@ -21,8 +20,29 @@ export interface HomeSections {
   genres: GenreItem[];
 }
 
+export const EMPTY_HOME_SECTIONS: HomeSections = {
+  heroItems: [],
+  spotlightPicks: [],
+  continueWatching: [],
+  trendingNow: [],
+  popularMovies: [],
+  newReleases: [],
+  recommendedForYou: [],
+  actionMovies: [],
+  sciFi: [],
+  tvShows: [],
+  genres: []
+};
+
 const ACTION_GENRE_ID = '28';
 const SCI_FI_GENRE_ID = '878';
+const HOME_MIN_YEAR = 2000;
+const HOME_MAX_YEAR = 2026;
+const MIN_UNAVAILABLE_RELEASE_AGE_DAYS = 45;
+const RECENT_RELEASE_MAX_AGE_DAYS = 365 * 4;
+const CATALOG_RELEASE_MAX_AGE_DAYS = 365 * 12;
+const NEW_RELEASE_MIN_AGE_DAYS = 30;
+const NEW_RELEASE_MAX_AGE_DAYS = 365 * 2;
 const LOCAL_ITEM_FIELDS = [
   'Overview',
   'Genres',
@@ -50,7 +70,7 @@ export class MediaService {
 
   getHomeSections(userId: string): Observable<HomeSections> {
     const source$ = this.tmdb.isConfigured() ? this.getTmdbHomeSections(userId) : this.getLocalHomeSections(userId);
-    return source$.pipe(catchError(() => of(this.enrichWithMockCatalog(MOCK_HOME_CATALOG))));
+    return source$.pipe(catchError(() => of(EMPTY_HOME_SECTIONS)));
   }
 
   getTrendingMovies(userId: string): Observable<MediaItem[]> {
@@ -58,7 +78,12 @@ export class MediaService {
       return this.getLocalTrendingMovies(userId);
     }
 
-    return this.matchCatalogSource(userId, this.tmdb.getTrending(18), MOCK_HOME_CATALOG.trendingNow, 18);
+    return this.matchCatalogSource(
+      userId,
+      this.tmdb.getTrending(18),
+      18,
+      (items, limit) => this.pickBalancedCatalog(items, limit)
+    );
   }
 
   getRecentlyAdded(userId: string): Observable<MediaItem[]> {
@@ -66,7 +91,12 @@ export class MediaService {
       return this.getLocalRecentlyAdded(userId);
     }
 
-    return this.matchCatalogSource(userId, this.tmdb.getNewReleases(18), MOCK_HOME_CATALOG.newReleases, 18);
+    return this.matchCatalogSource(
+      userId,
+      this.tmdb.getNewReleases(18),
+      18,
+      (items, limit) => this.pickBalancedNewReleases(items, limit)
+    );
   }
 
   getContinueWatching(userId: string): Observable<MediaItem[]> {
@@ -78,7 +108,7 @@ export class MediaService {
       })
       .pipe(
         map((response) => (response.Items ?? []).map((item) => this.library.normalizeLocalItem(item))),
-        catchError(() => of(MOCK_HOME_CATALOG.continueWatching))
+        catchError(() => of([] as MediaItem[]))
       );
   }
 
@@ -93,9 +123,14 @@ export class MediaService {
           this.tmdb.getPopularMovies(20),
           this.tmdb.getTopRatedMovies(20),
           this.tmdb.getNewReleases(20)
-        ]).pipe(map(([popular, topRated, newReleases]) => this.pickDistinct([...popular, ...topRated, ...newReleases], 36)));
+        ]).pipe(map(([popular, topRated, newReleases]) => this.pickDistinct([...popular, ...topRated, ...newReleases], 48)));
 
-    return this.matchCatalogSource(userId, source$, genre ? MOCK_HOME_CATALOG.actionMovies : MOCK_HOME_CATALOG.popularMovies, 36);
+    return this.matchCatalogSource(
+      userId,
+      source$,
+      36,
+      (items, limit) => this.pickBalancedCatalog(items, limit)
+    );
   }
 
   getSeries(userId: string, genre?: string): Observable<MediaItem[]> {
@@ -103,7 +138,12 @@ export class MediaService {
       return this.getLocalSeries(userId, genre);
     }
 
-    return this.matchCatalogSource(userId, this.tmdb.getTvShows(36, genre), MOCK_HOME_CATALOG.tvShows, 36);
+    return this.matchCatalogSource(
+      userId,
+      this.tmdb.getTvShows(36, genre),
+      36,
+      (items, limit) => this.pickBalancedCatalog(items, limit)
+    );
   }
 
   getFavorites(userId: string): Observable<MediaItem[]> {
@@ -128,15 +168,11 @@ export class MediaService {
 
     return this.tmdb.getGenres().pipe(
       map((genres) => genres.slice(0, 18)),
-      catchError(() => of(MOCK_HOME_CATALOG.genres))
+      catchError(() => of([] as GenreItem[]))
     );
   }
 
   getDetails(userId: string, itemId: string): Observable<MediaItem> {
-    if (MOCK_ITEM_LOOKUP.has(itemId)) {
-      return of(MOCK_ITEM_LOOKUP.get(itemId)!);
-    }
-
     const parsed = this.parseRouteId(itemId);
 
     if (parsed.kind === 'tmdb' && this.tmdb.isConfigured()) {
@@ -167,10 +203,6 @@ export class MediaService {
   getRecommended(userId: string, itemId: string): Observable<MediaItem[]> {
     return this.getDetails(userId, itemId).pipe(
       switchMap((item) => {
-        if (item.Source === 'mock') {
-          return of(MOCK_HOME_CATALOG.recommendedForYou.filter((candidate) => candidate.Id !== item.Id).slice(0, 12));
-        }
-
         const genreId = item.GenreIds?.[0] ? `${item.GenreIds[0]}` : undefined;
         const source$ = item.TmdbMediaType === 'tv' ? this.getSeries(userId, genreId) : this.getMovies(userId, genreId);
 
@@ -213,7 +245,7 @@ export class MediaService {
       return this.api.imageUrl(this.playbackTargetId(item) ?? item.Id, 'Primary', tag, width);
     }
 
-    return item.MockPosterUrl ?? null;
+    return null;
   }
 
   backdropUrl(item: MediaItem, width = 1600): string | null {
@@ -232,7 +264,7 @@ export class MediaService {
       return this.api.imageUrl(item.ParentBackdropItemId, 'Backdrop', undefined, width);
     }
 
-    return item.MockBackdropUrl ?? null;
+    return null;
   }
 
   runtimeText(item: MediaItem): string {
@@ -306,12 +338,29 @@ export class MediaService {
       this.tmdb.getMoviesByGenre(SCI_FI_GENRE_ID, 18),
       this.tmdb.getTvShows(18),
       this.getContinueWatching(userId),
-      this.getGenres(userId)
+      this.getGenres(userId),
+      this.getLocalRecentlyAdded(userId),
+      this.getLocalMovies(userId),
+      this.getLocalSeries(userId)
     ]).pipe(
-      switchMap(([trending, popular, topRated, newReleases, actionMovies, sciFiMovies, tvShows, continueWatching, genres]) =>
+      switchMap(
+        ([
+          trending,
+          popular,
+          topRated,
+          newReleases,
+          actionMovies,
+          sciFiMovies,
+          tvShows,
+          continueWatching,
+          genres,
+          localRecentlyAdded,
+          localMovies,
+          localSeries
+        ]) =>
         combineLatest([
-          this.library.matchCatalogItems(userId, this.pickDistinct([...trending, ...popular, ...tvShows], 5)),
-          this.library.matchCatalogItems(userId, this.pickDistinct([...topRated, ...newReleases, ...popular], 4)),
+          this.library.matchCatalogItems(userId, this.pickDistinct([...trending, ...popular, ...tvShows], 12)),
+          this.library.matchCatalogItems(userId, this.pickDistinct([...topRated, ...newReleases, ...popular], 12)),
           this.library.matchCatalogItems(userId, trending.slice(0, 12)),
           this.library.matchCatalogItems(userId, popular.slice(0, 12)),
           this.library.matchCatalogItems(userId, newReleases.slice(0, 12)),
@@ -320,7 +369,10 @@ export class MediaService {
           this.library.matchCatalogItems(userId, sciFiMovies.slice(0, 12)),
           this.library.matchCatalogItems(userId, tvShows.slice(0, 12)),
           of(continueWatching),
-          of(genres)
+          of(genres),
+          of(localRecentlyAdded),
+          of(localMovies),
+          of(localSeries)
         ])
       ),
       map(
@@ -335,21 +387,104 @@ export class MediaService {
           sciFi,
           tvShows,
           continueWatching,
-          genres
-        ]) =>
-          this.enrichWithMockCatalog({
-            heroItems,
-            spotlightPicks,
+          genres,
+          localRecentlyAdded,
+          localMovies,
+          localSeries
+        ]) => {
+          const localRecentMovies = localRecentlyAdded.filter((item) => item.Type === 'Movie');
+          const localRecentSeries = localRecentlyAdded.filter((item) => item.Type === 'Series');
+          const localMoviePool = this.pickDistinct(
+            [...localRecentMovies, ...this.pickTopRated(localMovies, 18), ...localMovies],
+            24
+          );
+          const localSeriesPool = this.pickDistinct(
+            [...localRecentSeries, ...this.pickTopRated(localSeries, 18), ...localSeries],
+            18
+          );
+          const localActionMovies = this.pickByGenre(localMoviePool, ['Action', 'Adventure', 'Thriller'], 12);
+          const localSciFiMovies = this.pickByGenre(localMoviePool, ['Science Fiction', 'Sci-Fi', 'Sci Fi', 'Fantasy'], 12);
+          const curatedHeroItems = this.preferInstalledInRow(
+            this.pickBalancedCatalog(
+              this.pickDistinct([...localRecentMovies, ...heroItems, ...localMoviePool, ...localSeriesPool], 18),
+              8
+            ),
+            4,
+            [],
+            2
+          );
+          const curatedHeroIds = curatedHeroItems.map((item) => item.Id);
+
+          return this.finalizeHomeSections({
+            heroItems: curatedHeroItems,
+            spotlightPicks: this.preferInstalledInRow(
+              this.pickBalancedCatalog(
+                this.pickDistinct([...spotlightPicks, ...localRecentMovies, ...localMoviePool], 18),
+                8,
+                curatedHeroIds
+              ),
+              4,
+              curatedHeroIds,
+              2
+            ),
             continueWatching,
-            trendingNow,
-            popularMovies,
-            newReleases,
-            recommendedForYou,
-            actionMovies,
-            sciFi,
-            tvShows,
+            trendingNow: this.preferInstalledInRow(
+              this.pickBalancedCatalog(this.pickDistinct([...trendingNow, ...localRecentMovies, ...localMoviePool], 24), 12),
+              12,
+              [],
+              4
+            ),
+            popularMovies: this.preferInstalledInRow(
+              this.pickBalancedCatalog(
+                this.pickDistinct([...popularMovies, ...this.pickTopRated(localMoviePool, 12), ...localRecentMovies], 24),
+                12
+              ),
+              12,
+              [],
+              4
+            ),
+            newReleases: this.preferInstalledInRow(
+              this.pickBalancedNewReleases(
+                this.pickDistinct([...newReleases, ...localRecentMovies, ...localMoviePool], 24),
+                12
+              ),
+              12,
+              [],
+              4
+            ),
+            recommendedForYou: this.preferInstalledInRow(
+              this.pickBalancedCatalog(
+                this.pickDistinct(
+                  [...continueWatching, ...recommendedForYou, ...localRecentMovies, ...this.pickTopRated(localMoviePool, 12)],
+                  24
+                ),
+                12
+              ),
+              12,
+              [],
+              4
+            ),
+            actionMovies: this.preferInstalledInRow(
+              this.pickBalancedCatalog(this.pickDistinct([...actionMovies, ...localActionMovies, ...localRecentMovies], 24), 12),
+              12,
+              [],
+              4
+            ),
+            sciFi: this.preferInstalledInRow(
+              this.pickBalancedCatalog(this.pickDistinct([...sciFi, ...localSciFiMovies, ...localRecentMovies], 24), 12),
+              12,
+              [],
+              4
+            ),
+            tvShows: this.preferInstalledInRow(
+              this.pickBalancedCatalog(this.pickDistinct([...tvShows, ...localSeriesPool], 24), 12),
+              12,
+              [],
+              4
+            ),
             genres
-          })
+          });
+        }
       )
     );
   }
@@ -367,7 +502,7 @@ export class MediaService {
         const heroItems = this.pickDistinct([...trendingNow, ...recentlyAdded, ...movies, ...tvShows], 4);
         const excluded = heroItems.map((item) => item.Id);
 
-        return this.enrichWithMockCatalog({
+        return this.finalizeHomeSections({
           heroItems,
           spotlightPicks: this.pickDistinct([...recentlyAdded, ...tvShows, ...movies], 4, excluded),
           continueWatching: continueWatching.slice(0, 8),
@@ -456,7 +591,7 @@ export class MediaService {
       })
       .pipe(
         map((response) => response.Items ?? []),
-        catchError(() => of(MOCK_HOME_CATALOG.genres))
+        catchError(() => of([] as GenreItem[]))
       );
   }
 
@@ -485,34 +620,119 @@ export class MediaService {
   private matchCatalogSource(
     userId: string,
     source$: Observable<MediaItem[]>,
-    fallback: MediaItem[],
-    limit: number
+    limit: number,
+    curate: (items: MediaItem[], limit: number) => MediaItem[] = (items, rowLimit) =>
+      this.pickDistinct(items, rowLimit)
   ): Observable<MediaItem[]> {
     return source$.pipe(
       switchMap((items) => this.library.matchCatalogItems(userId, items)),
-      map((items) => this.mergeRows(items, fallback, limit)),
-      catchError(() => of(this.mergeRows([], fallback, limit)))
+      map((items) => curate(items, limit)),
+      catchError(() => of([] as MediaItem[]))
     );
   }
 
-  private enrichWithMockCatalog(partial: HomeSections): HomeSections {
+  private finalizeHomeSections(partial: HomeSections): HomeSections {
+    const heroItems = this.pickDistinct(this.filterHomeYearWindow(partial.heroItems), 4);
+    const trendingNow = this.pickDistinct(this.filterHomeYearWindow(partial.trendingNow), 12);
+    const popularMovies = this.pickDistinct(this.filterHomeYearWindow(partial.popularMovies), 12);
+    const newReleases = this.pickDistinct(this.filterHomeYearWindow(partial.newReleases), 12);
+    const recommendedForYou = this.pickDistinct(this.filterHomeYearWindow(partial.recommendedForYou), 12);
+    const actionMovies = this.pickDistinct(this.filterHomeYearWindow(partial.actionMovies), 12);
+    const sciFi = this.pickDistinct(this.filterHomeYearWindow(partial.sciFi), 12);
+    const tvShows = this.pickDistinct(this.filterHomeYearWindow(partial.tvShows), 12);
+    const continueWatching = this.pickDistinct(this.filterHomeYearWindow(partial.continueWatching), 8);
+    const spotlightSeed = this.filterHomeYearWindow(partial.spotlightPicks);
+    const spotlightPicks = this.pickDistinct(
+      [
+        ...spotlightSeed,
+        ...recommendedForYou,
+        ...trendingNow,
+        ...popularMovies,
+        ...actionMovies,
+        ...sciFi,
+        ...tvShows
+      ],
+      4,
+      heroItems.map((item) => item.Id)
+    );
+
     return {
-      heroItems: this.mergeRows(partial.heroItems, MOCK_HOME_CATALOG.heroItems, 4),
-      spotlightPicks: this.mergeRows(partial.spotlightPicks, MOCK_HOME_CATALOG.spotlightPicks, 4),
-      continueWatching: this.mergeRows(partial.continueWatching, MOCK_HOME_CATALOG.continueWatching, 8),
-      trendingNow: this.mergeRows(partial.trendingNow, MOCK_HOME_CATALOG.trendingNow, 12),
-      popularMovies: this.mergeRows(partial.popularMovies, MOCK_HOME_CATALOG.popularMovies, 12),
-      newReleases: this.mergeRows(partial.newReleases, MOCK_HOME_CATALOG.newReleases, 12),
-      recommendedForYou: this.mergeRows(partial.recommendedForYou, MOCK_HOME_CATALOG.recommendedForYou, 12),
-      actionMovies: this.mergeRows(partial.actionMovies, MOCK_HOME_CATALOG.actionMovies, 12),
-      sciFi: this.mergeRows(partial.sciFi, MOCK_HOME_CATALOG.sciFi, 12),
-      tvShows: this.mergeRows(partial.tvShows, MOCK_HOME_CATALOG.tvShows, 12),
-      genres: partial.genres.length ? partial.genres : MOCK_HOME_CATALOG.genres
+      heroItems,
+      spotlightPicks,
+      continueWatching,
+      trendingNow,
+      popularMovies,
+      newReleases,
+      recommendedForYou,
+      actionMovies,
+      sciFi,
+      tvShows,
+      genres: partial.genres.slice(0, 18)
     };
   }
 
-  private mergeRows(primary: MediaItem[], fallback: MediaItem[], limit: number) {
-    return this.pickDistinct([...primary, ...fallback], limit);
+  private pickBalancedCatalog(items: MediaItem[], limit: number, excludeIds: string[] = []) {
+    const releasedItems = items.filter((item) => !this.isFutureRelease(item));
+    const freshAvailable = releasedItems.filter(
+      (item) => item.Available && this.isReleaseAgeBetween(item, 0, MIN_UNAVAILABLE_RELEASE_AGE_DAYS - 1)
+    );
+    const currentEra = releasedItems.filter((item) =>
+      this.isReleaseAgeBetween(item, MIN_UNAVAILABLE_RELEASE_AGE_DAYS, RECENT_RELEASE_MAX_AGE_DAYS)
+    );
+    const established = releasedItems.filter((item) =>
+      this.isReleaseAgeBetween(item, RECENT_RELEASE_MAX_AGE_DAYS + 1, CATALOG_RELEASE_MAX_AGE_DAYS)
+    );
+    const legacy = releasedItems.filter((item) => {
+      const age = this.releaseAgeInDays(item);
+      return age != null && age > CATALOG_RELEASE_MAX_AGE_DAYS;
+    });
+    const undated = releasedItems.filter((item) => this.releaseAgeInDays(item) == null);
+
+    const seen = new Set(excludeIds);
+    const result: MediaItem[] = [];
+
+    this.pushDistinctInto(result, established, Math.max(1, Math.round(limit * 0.4)), seen);
+    this.pushDistinctInto(result, currentEra, Math.max(1, Math.round(limit * 0.35)), seen);
+    this.pushDistinctInto(result, freshAvailable, Math.max(1, Math.round(limit * 0.15)), seen);
+    this.pushDistinctInto(result, [...undated, ...legacy], limit - result.length, seen);
+    this.pushDistinctInto(result, releasedItems, limit - result.length, seen);
+
+    return result.slice(0, limit);
+  }
+
+  private pickBalancedNewReleases(items: MediaItem[], limit: number, excludeIds: string[] = []) {
+    const releasedItems = items.filter((item) => !this.isFutureRelease(item));
+    const recentWindow = releasedItems.filter((item) =>
+      this.isReleaseAgeBetween(item, NEW_RELEASE_MIN_AGE_DAYS, NEW_RELEASE_MAX_AGE_DAYS)
+    );
+    const freshAvailable = releasedItems.filter(
+      (item) => item.Available && this.isReleaseAgeBetween(item, 0, NEW_RELEASE_MIN_AGE_DAYS - 1)
+    );
+    const fallbackCatalog = releasedItems.filter((item) =>
+      this.isReleaseAgeBetween(item, NEW_RELEASE_MAX_AGE_DAYS + 1, CATALOG_RELEASE_MAX_AGE_DAYS)
+    );
+    const undated = releasedItems.filter((item) => this.releaseAgeInDays(item) == null);
+
+    const seen = new Set(excludeIds);
+    const result: MediaItem[] = [];
+
+    this.pushDistinctInto(result, recentWindow, Math.max(1, Math.round(limit * 0.65)), seen);
+    this.pushDistinctInto(result, fallbackCatalog, Math.max(1, Math.round(limit * 0.2)), seen);
+    this.pushDistinctInto(result, freshAvailable, Math.max(1, Math.round(limit * 0.15)), seen);
+    this.pushDistinctInto(result, undated, limit - result.length, seen);
+    this.pushDistinctInto(result, releasedItems, limit - result.length, seen);
+
+    return result.slice(0, limit);
+  }
+
+  private preferInstalledInRow(items: MediaItem[], limit: number, excludeIds: string[] = [], leadInstalledCount = 4) {
+    const installedLead = this.pickDistinct(
+      items.filter((item) => item.Available),
+      Math.min(limit, leadInstalledCount),
+      excludeIds
+    );
+
+    return this.pickDistinct([...installedLead, ...items], limit, excludeIds);
   }
 
   private pickDistinct(items: MediaItem[], limit: number, excludeIds: string[] = []): MediaItem[] {
@@ -535,6 +755,27 @@ export class MediaService {
     return result;
   }
 
+  private pushDistinctInto(result: MediaItem[], items: MediaItem[], targetCount: number, seen: Set<string>) {
+    if (targetCount <= 0) {
+      return;
+    }
+
+    const startingLength = result.length;
+
+    for (const item of items) {
+      if (!item?.Id || seen.has(item.Id)) {
+        continue;
+      }
+
+      seen.add(item.Id);
+      result.push(item);
+
+      if (result.length - startingLength >= targetCount) {
+        break;
+      }
+    }
+  }
+
   private pickTopRated(items: MediaItem[], limit: number, excludeIds: string[] = []) {
     return this.pickDistinct(
       [...items].sort((left, right) => (right.CommunityRating ?? 0) - (left.CommunityRating ?? 0)),
@@ -555,6 +796,33 @@ export class MediaService {
     );
 
     return this.pickDistinct(matches.length ? matches : items, limit, excludeIds);
+  }
+
+  private releaseAgeInDays(item: MediaItem): number | null {
+    const releaseDate = item.PremiereDate ? new Date(item.PremiereDate) : null;
+
+    if (!releaseDate || Number.isNaN(releaseDate.getTime())) {
+      return null;
+    }
+
+    return Math.floor((Date.now() - releaseDate.getTime()) / 86_400_000);
+  }
+
+  private isFutureRelease(item: MediaItem) {
+    const age = this.releaseAgeInDays(item);
+    return age != null && age < 0;
+  }
+
+  private isReleaseAgeBetween(item: MediaItem, minimumDays: number, maximumDays: number) {
+    const age = this.releaseAgeInDays(item);
+    return age != null && age >= minimumDays && age <= maximumDays;
+  }
+
+  private filterHomeYearWindow(items: MediaItem[]) {
+    return items.filter((item) => {
+      const year = item.ProductionYear ?? (item.PremiereDate ? new Date(item.PremiereDate).getFullYear() : null);
+      return year != null && year >= HOME_MIN_YEAR && year <= HOME_MAX_YEAR;
+    });
   }
 
   private parseRouteId(routeId: string):
@@ -584,16 +852,14 @@ export class MediaService {
   }
 
   private missingItem(itemId: string): MediaItem {
-    return (
-      MOCK_ITEM_LOOKUP.get(itemId) ?? {
-        Id: itemId,
-        Name: 'Title unavailable',
-        Type: 'Movie',
-        Overview: 'This title is not available right now, but it can still be saved for later.',
-        Genres: ['Featured'],
-        Source: 'mock',
-        Available: false
-      }
-    );
+    return {
+      Id: itemId,
+      Name: 'Title unavailable',
+      Type: 'Movie',
+      Overview: 'This title is not available right now, but it can still be saved for later.',
+      Genres: ['Featured'],
+      Source: 'tmdb',
+      Available: false
+    };
   }
 }

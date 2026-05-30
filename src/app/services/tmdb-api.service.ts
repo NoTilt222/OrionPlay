@@ -81,12 +81,15 @@ export class TmdbApiService {
   }
 
   getPopularMovies(limit = 24): Observable<MediaItem[]> {
+    const today = this.formatDate(new Date());
+
     return this.getCatalogList(
       '/discover/movie',
       {
         include_adult: false,
         include_video: false,
         page: 1,
+        'primary_release_date.lte': today,
         region: this.configService.tmdb.region,
         sort_by: 'popularity.desc',
         'vote_count.gte': 80
@@ -97,12 +100,15 @@ export class TmdbApiService {
   }
 
   getTopRatedMovies(limit = 24): Observable<MediaItem[]> {
+    const today = this.formatDate(new Date());
+
     return this.getCatalogList(
       '/discover/movie',
       {
         include_adult: false,
         include_video: false,
         page: 1,
+        'primary_release_date.lte': today,
         region: this.configService.tmdb.region,
         sort_by: 'vote_average.desc',
         'vote_count.gte': 800
@@ -134,12 +140,15 @@ export class TmdbApiService {
   }
 
   getMoviesByGenre(genreId: string, limit = 24): Observable<MediaItem[]> {
+    const today = this.formatDate(new Date());
+
     return this.getCatalogList(
       '/discover/movie',
       {
         include_adult: false,
         include_video: false,
         page: 1,
+        'primary_release_date.lte': today,
         region: this.configService.tmdb.region,
         sort_by: 'popularity.desc',
         with_genres: genreId
@@ -150,9 +159,12 @@ export class TmdbApiService {
   }
 
   getTvShows(limit = 24, genreId?: string): Observable<MediaItem[]> {
+    const today = this.formatDate(new Date());
+
     return this.getCatalogList(
       '/discover/tv',
       {
+        'first_air_date.lte': today,
         include_adult: false,
         page: 1,
         sort_by: 'popularity.desc',
@@ -256,6 +268,7 @@ export class TmdbApiService {
       map(([response, genreMap]) =>
         response.results
           .filter((item) => (forcedMediaType ?? item.media_type) !== 'person')
+          .filter((item) => this.isReleasedCatalogItem(item, forcedMediaType))
           .map((item) => this.toMediaItem(item, forcedMediaType, genreMap))
           .filter((item) => Boolean(item.Name))
           .slice(0, limit)
@@ -427,6 +440,19 @@ export class TmdbApiService {
     }
 
     return mixed;
+  }
+
+  private isReleasedCatalogItem(item: TmdbMediaSummary, forcedMediaType?: TmdbMediaType) {
+    const mediaType = forcedMediaType ?? (item.media_type === 'tv' ? 'tv' : 'movie');
+    const releaseDate = mediaType === 'tv' ? item.first_air_date : item.release_date;
+
+    if (!releaseDate) {
+      return true;
+    }
+
+    const releaseTimestamp = new Date(releaseDate).getTime();
+
+    return Number.isNaN(releaseTimestamp) || releaseTimestamp <= Date.now();
   }
 
   private formatDate(date: Date): string {

@@ -38,10 +38,14 @@
 
       <label>
         Subtitles
-        <select [value]="selectedSubtitle()" (change)="setSubtitle($any($event.target).value)">
+        <select
+          [value]="selectedSubtitle()"
+          [disabled]="!hasSubtitleTracks()"
+          (change)="setSubtitle($any($event.target).value)"
+        >
           <option value="-1">Off</option>
-          <option *ngFor="let track of subtitleTracks(); let i = index" [value]="i">
-            {{ track.name || track.lang || ('Track ' + (i + 1)) }}
+          <option *ngFor="let track of subtitleTracks(); let i = index" [value]="track.value">
+            {{ track.label || ('Track ' + (i + 1)) }}
           </option>
         </select>
       </label>

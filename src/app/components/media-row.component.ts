@@ -1,5 +1,5 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { MediaItem } from '../models/media.model';
 import { MediaCardComponent } from './media-card.component';
 
@@ -19,5 +19,20 @@ export class MediaRowComponent {
   @Input() variant: 'poster' | 'wide' = 'poster';
   @Input() showProgress = false;
 
+  @ViewChild('scrollTrack') private scrollTrackRef?: ElementRef<HTMLElement>;
+
   trackById = (_: number, item: MediaItem) => item.Id;
+
+  scrollNext() {
+    const track = this.scrollTrackRef?.nativeElement;
+
+    if (!track) {
+      return;
+    }
+
+    track.scrollBy({
+      left: Math.max(track.clientWidth * 0.82, this.variant === 'wide' ? 380 : 260),
+      behavior: 'smooth'
+    });
+  }
 }

@@ -6,7 +6,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, finalize, of } from 'rxjs';
 import { JellyfinUser } from '../models/auth.model';
 import { MediaItem } from '../models/media.model';
-import { MOCK_LOGIN_POSTERS } from '../shared/mock-catalog';
 import { AppConfigService } from '../services/app-config.service';
 import { AuthService } from '../services/auth.service';
 import { MediaService } from '../services/media.service';
@@ -37,7 +36,7 @@ export class LoginPageComponent {
   protected readonly publicUsers = signal<JellyfinUser[]>([]);
   protected readonly selectedPublicUserId = signal('');
   protected readonly createAccountOpen = signal(false);
-  protected readonly showcasePosters = signal<MediaItem[]>(MOCK_LOGIN_POSTERS);
+  protected readonly showcasePosters = signal<MediaItem[]>([]);
 
   protected readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
@@ -60,13 +59,13 @@ export class LoginPageComponent {
     if (this.tmdb.isConfigured()) {
       this.tmdb
         .getTrending(8)
-        .pipe(catchError(() => of(MOCK_LOGIN_POSTERS)))
-        .subscribe((items) => this.showcasePosters.set(items.length ? items : MOCK_LOGIN_POSTERS));
+        .pipe(catchError(() => of([] as MediaItem[])))
+        .subscribe((items) => this.showcasePosters.set(items));
     }
   }
 
   posterArt(item: MediaItem): string {
-    const artwork = this.media.posterUrl(item, 780) ?? item.MockPosterUrl;
+    const artwork = this.media.posterUrl(item, 780);
     return artwork ? `url('${artwork}')` : '';
   }
 

@@ -16,7 +16,7 @@
           <span class="muted">Handpicked</span>
         </div>
 
-        <div class="spotlight-grid">
+        <div *ngIf="home.spotlightPicks.length; else spotlightEmpty" class="spotlight-grid">
           <a
             *ngFor="let item of home.spotlightPicks; trackBy: trackById"
             class="spotlight-card"
@@ -30,6 +30,13 @@
             </div>
           </a>
         </div>
+
+        <ng-template #spotlightEmpty>
+          <div class="spotlight-empty">
+            <strong>More titles are on the way</strong>
+            <p>We are still curating tonight's picks for this profile.</p>
+          </div>
+        </ng-template>
       </aside>
 
       <section class="continue-section glass-panel">

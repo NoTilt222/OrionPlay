@@ -4,10 +4,23 @@
       <h2 class="section-title">{{ title }}</h2>
       <span class="muted" *ngIf="caption">{{ caption }}</span>
     </div>
-    <span class="row-arrow icon-font">chevron_right</span>
+    <button
+      *ngIf="items?.length"
+      type="button"
+      class="row-arrow"
+      [attr.aria-label]="'Show more from ' + title"
+      (click)="scrollNext()"
+    >
+      <span class="icon-font">chevron_right</span>
+    </button>
   </div>
 
-  <div *ngIf="items?.length; else emptyState" class="row-scroll" [ngClass]="{ 'row-scroll--wide': variant === 'wide' }">
+  <div
+    *ngIf="items?.length; else emptyState"
+    #scrollTrack
+    class="row-scroll"
+    [ngClass]="{ 'row-scroll--wide': variant === 'wide' }"
+  >
     <app-media-card
       *ngFor="let item of items; trackBy: trackById"
       [item]="item"

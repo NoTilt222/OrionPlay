@@ -20,8 +20,10 @@ import { MediaService } from '../services/media.service';
 import { PlaybackStateService } from '../services/playback-state.service';
 
 interface SubtitleTrackOption {
-  name?: string;
+  label: string;
+  value: number;
   lang?: string;
+  streamIndex?: number;
 }
 
 @Component({
@@ -47,6 +49,8 @@ export class VideoPlayerComponent implements AfterViewInit, OnChanges {
 
   private hls: Hls | null = null;
   private progressInterval: number | null = null;
+  private currentSubtitleStreamIndex: number | undefined;
+  private subtitleSelectionInitialized = false;
 
   protected readonly qualities = signal<QualityOption[]>([]);
   protected readonly subtitleTracks = signal<SubtitleTrackOption[]>([]);
@@ -76,12 +80,23 @@ export class VideoPlayerComponent implements AfterViewInit, OnChanges {
 
   setSubtitle(value: string) {
     this.selectedSubtitle.set(value);
-    const video = this.videoRef.nativeElement;
     const numericValue = Number(value);
+    const selectedTrack = this.subtitleTracks().find((track) => track.value === numericValue);
 
-    for (let index = 0; index < video.textTracks.length; index += 1) {
-      video.textTracks[index].mode = index === numericValue ? 'showing' : 'disabled';
+    this.currentSubtitleStreamIndex = selectedTrack?.streamIndex;
+
+    if (this.hls) {
+      this.hls.subtitleDisplay = numericValue >= 0;
+      this.hls.subtitleTrack = numericValue;
+      return;
     }
+
+    const video = this.videoRef.nativeElement;
+    this.setNativeSubtitleSelection(video, numericValue);
+  }
+
+  hasSubtitleTracks() {
+    return this.subtitleTracks().length > 0;
   }
 
   async toggleFullscreen() {
@@ -101,6 +116,14 @@ export class VideoPlayerComponent implements AfterViewInit, OnChanges {
     const video = this.videoRef.nativeElement;
     const mediaSource = this.playbackInfo.MediaSources?.[0];
     const playbackItemId = this.media.playbackTargetId(this.item);
+    const subtitleStreams = this.getSubtitleStreams(mediaSource);
+
+    this.qualities.set([]);
+    this.subtitleTracks.set([]);
+    this.selectedQuality.set('-1');
+    this.selectedSubtitle.set('-1');
+    this.currentSubtitleStreamIndex = undefined;
+    this.subtitleSelectionInitialized = false;
 
     if (!playbackItemId) {
       return;
@@ -127,15 +150,34 @@ export class VideoPlayerComponent implements AfterViewInit, OnChanges {
       });
 
       this.hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_, data) => {
-        this.subtitleTracks.set(
-          data.subtitleTracks.map((track) => ({
-            name: track.name,
-            lang: track.lang
-          }))
-        );
+        const trackOptions = data.subtitleTracks.map((track, index) => ({
+          label: this.buildSubtitleLabel(track.name, track.lang, track.forced),
+          value: index,
+          lang: track.lang,
+          streamIndex: this.matchSubtitleStreamIndex(track.name, track.lang, subtitleStreams, index)
+        }));
+
+        this.subtitleTracks.set(trackOptions);
+        this.applyInitialSubtitleSelection(video, mediaSource, trackOptions);
+      });
+
+      this.hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, (_, data) => {
+        this.selectedSubtitle.set(String(data.id));
+        this.currentSubtitleStreamIndex = this.subtitleTracks().find(
+          (track) => track.value === data.id
+        )?.streamIndex;
       });
     } else {
       video.src = hlsUrl;
+      video.addEventListener(
+        'loadedmetadata',
+        () => {
+          const trackOptions = this.buildNativeSubtitleOptions(video, subtitleStreams);
+          this.subtitleTracks.set(trackOptions);
+          this.applyInitialSubtitleSelection(video, mediaSource, trackOptions);
+        },
+        { once: true }
+      );
       void video.play();
     }
 
@@ -155,7 +197,8 @@ export class VideoPlayerComponent implements AfterViewInit, OnChanges {
           mediaSourceId: mediaSource?.Id,
           playSessionId: this.playbackInfo.PlaySessionId,
           positionTicks,
-          isPaused: video.paused
+          isPaused: video.paused,
+          subtitleStreamIndex: this.currentSubtitleStreamIndex
         })
         .subscribe();
     }, 15000);
@@ -197,6 +240,108 @@ export class VideoPlayerComponent implements AfterViewInit, OnChanges {
 
     this.hls?.destroy();
     this.hls = null;
+    this.subtitleTracks.set([]);
+    this.selectedSubtitle.set('-1');
+    this.currentSubtitleStreamIndex = undefined;
+    this.subtitleSelectionInitialized = false;
+  }
+
+  private applyInitialSubtitleSelection(
+    video: HTMLVideoElement,
+    mediaSource: PlaybackInfoResponse['MediaSources'][number] | undefined,
+    trackOptions: SubtitleTrackOption[]
+  ) {
+    if (this.subtitleSelectionInitialized) {
+      return;
+    }
+
+    this.subtitleSelectionInitialized = true;
+
+    if (!trackOptions.length) {
+      return;
+    }
+
+    const defaultSubtitleStreamIndex = mediaSource?.DefaultSubtitleStreamIndex;
+
+    if (defaultSubtitleStreamIndex == null) {
+      if (this.hls) {
+        this.hls.subtitleDisplay = false;
+        this.hls.subtitleTrack = -1;
+      } else {
+        this.setNativeSubtitleSelection(video, -1);
+      }
+
+      return;
+    }
+
+    const defaultTrack = trackOptions.find(
+      (track) => track.streamIndex === defaultSubtitleStreamIndex
+    );
+
+    if (defaultTrack) {
+      this.setSubtitle(String(defaultTrack.value));
+    }
+  }
+
+  private buildNativeSubtitleOptions(
+    video: HTMLVideoElement,
+    subtitleStreams: NonNullable<PlaybackInfoResponse['MediaSources'][number]['MediaStreams']>
+  ) {
+    return Array.from({ length: video.textTracks.length }, (_, index) => {
+      const browserTrack = video.textTracks[index];
+      const streamIndex = subtitleStreams[index]?.Index;
+
+      return {
+        label: this.buildSubtitleLabel(browserTrack.label, browserTrack.language),
+        value: index,
+        lang: browserTrack.language,
+        streamIndex
+      };
+    });
+  }
+
+  private getSubtitleStreams(mediaSource: PlaybackInfoResponse['MediaSources'][number] | undefined) {
+    return (mediaSource?.MediaStreams ?? []).filter(
+      (stream) => stream.Type === 'Subtitle' && stream.IsTextSubtitleStream
+    );
+  }
+
+  private matchSubtitleStreamIndex(
+    trackName: string | undefined,
+    trackLanguage: string | undefined,
+    subtitleStreams: ReturnType<VideoPlayerComponent['getSubtitleStreams']>,
+    fallbackIndex: number
+  ) {
+    const normalizedTrackName = this.normalizeTrackText(trackName);
+    const normalizedTrackLanguage = this.normalizeTrackText(trackLanguage);
+
+    const matchedStream = subtitleStreams.find((stream) => {
+      const streamTitle = this.normalizeTrackText(stream.DisplayTitle);
+      const streamLanguage = this.normalizeTrackText(stream.Language);
+
+      return (
+        (normalizedTrackName && streamTitle.includes(normalizedTrackName)) ||
+        (normalizedTrackLanguage && streamLanguage === normalizedTrackLanguage)
+      );
+    });
+
+    return matchedStream?.Index ?? subtitleStreams[fallbackIndex]?.Index;
+  }
+
+  private buildSubtitleLabel(name?: string, language?: string, forced = false) {
+    const baseLabel = name?.trim() || language?.trim() || 'Subtitle Track';
+
+    return forced ? `${baseLabel} (Forced)` : baseLabel;
+  }
+
+  private normalizeTrackText(value?: string | null) {
+    return value?.trim().toLowerCase() ?? '';
+  }
+
+  private setNativeSubtitleSelection(video: HTMLVideoElement, numericValue: number) {
+    for (let index = 0; index < video.textTracks.length; index += 1) {
+      video.textTracks[index].mode = index === numericValue ? 'showing' : 'disabled';
+    }
   }
 
   private readonly onKeydown = (event: KeyboardEvent) => {

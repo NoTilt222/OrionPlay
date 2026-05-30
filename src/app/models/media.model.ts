@@ -14,6 +14,8 @@ export interface JellyfinMediaSource {
   Size?: number;
   RunTimeTicks?: number;
   MediaStreams?: JellyfinMediaStream[];
+  DefaultAudioStreamIndex?: number;
+  DefaultSubtitleStreamIndex?: number;
 }
 
 export interface JellyfinMediaStream {
@@ -21,9 +23,12 @@ export interface JellyfinMediaStream {
   DisplayTitle?: string;
   Language?: string;
   IsDefault?: boolean;
+  IsForced?: boolean;
   Type?: string;
   Codec?: string;
   IsExternal?: boolean;
+  IsTextSubtitleStream?: boolean;
+  SupportsExternalStream?: boolean;
 }
 
 export interface MediaCastMember {
@@ -62,8 +67,6 @@ export interface MediaItem {
   BackdropImageTags?: string[];
   ImageTags?: Record<string, string>;
   ProviderIds?: Record<string, string>;
-  MockPosterUrl?: string;
-  MockBackdropUrl?: string;
   PosterPath?: string | null;
   BackdropPath?: string | null;
   GenreIds?: number[];
@@ -71,7 +74,7 @@ export interface MediaItem {
   TmdbMediaType?: 'movie' | 'tv';
   LibraryItemId?: string;
   Available?: boolean;
-  Source?: 'jellyfin' | 'tmdb' | 'hybrid' | 'mock';
+  Source?: 'jellyfin' | 'tmdb' | 'hybrid';
   Cast?: MediaCastMember[];
   Trailers?: MediaTrailer[];
 }

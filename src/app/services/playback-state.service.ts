@@ -33,7 +33,7 @@ export class PlaybackStateService {
       api_key: token,
       VideoCodec: 'h264,hevc,av1',
       AudioCodec: 'aac,mp3,ac3,eac3',
-      SubtitleMethod: 'Embed',
+      SubtitleMethod: 'Hls',
       TranscodingMaxAudioChannels: 6,
       SegmentContainer: 'ts'
     });

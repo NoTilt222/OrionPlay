@@ -199,7 +199,7 @@ export class JellyfinLibraryService {
       return {
         ...item,
         Available: false,
-        Source: item.Source === 'mock' ? 'mock' : 'tmdb'
+        Source: 'tmdb'
       };
     }
 
